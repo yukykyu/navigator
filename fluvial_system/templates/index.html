@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Fluvial System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="fw-bold text-primary">
+            <i class="fas fa-chart-line"></i> Dashboard em Tempo Real
+        </h2>
+        <p class="text-muted">Visão geral das operações de hoje</p>
+    </div>
+</div>
+
+<!-- Cards de Resumo -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-2">Vendas Hoje</h6>
+                        <h2 class="card-title mb-0" id="total-vendas">R$ {{ "%.2f"|format(total_vendas_hoje) }}</h2>
+                    </div>
+                    <i class="fas fa-dollar-sign fa-3x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-success text-white shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-2">Atendimentos</h6>
+                        <h2 class="card-title mb-0">{{ quantidade_vendas_hoje }}</h2>
+                    </div>
+                    <i class="fas fa-car fa-3x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-info text-white shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-2">Portos Ativos</h6>
+                        <h2 class="card-title mb-0">{{ vendas_por_porto|length }}</h2>
+                    </div>
+                    <i class="fas fa-anchor fa-3x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-2">Ticket Médio</h6>
+                        <h2 class="card-title mb-0">
+                            {% if quantidade_vendas_hoje > 0 %}
+                                R$ {{ "%.2f"|format(total_vendas_hoje / quantidade_vendas_hoje) }}
+                            {% else %}
+                                R$ 0,00
+                            {% endif %}
+                        </h2>
+                    </div>
+                    <i class="fas fa-calculator fa-3x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos e Tabelas -->
+<div class="row g-3">
+    <!-- Vendas por Porto -->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-map-marker-alt text-primary"></i> Vendas por Porto</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="grafico-portos"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Vendas por Categoria -->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-car text-primary"></i> Vendas por Categoria</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="grafico-categorias"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Operadores -->
+<div class="row g-3 mt-3">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-trophy text-warning"></i> Top Operadores do Dia</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Operador</th>
+                                <th class="text-end">Atendimentos</th>
+                                <th class="text-end">Total Vendido</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for operador in top_operadores %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td><strong>{{ operador.nome }}</strong></td>
+                                <td class="text-end">{{ operador.quantidade }}</td>
+                                <td class="text-end text-success">
+                                    <strong>R$ {{ "%.2f"|format(operador.total) }}</strong>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    Nenhum atendimento registrado hoje
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vendas por Porto (Tabela) -->
+<div class="row g-3 mt-3">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-list text-primary"></i> Detalhamento por Porto</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Porto</th>
+                                <th class="text-center">Atendimentos</th>
+                                <th class="text-end">Total</th>
+                                <th class="text-end">% do Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for porto in vendas_por_porto %}
+                            <tr>
+                                <td><strong>{{ porto.nome }}</strong></td>
+                                <td class="text-center">{{ porto.quantidade }}</td>
+                                <td class="text-end text-success">R$ {{ "%.2f"|format(porto.total) }}</td>
+                                <td class="text-end">
+                                    {% if total_vendas_hoje > 0 %}
+                                        {{ "%.1f"|format((porto.total / total_vendas_hoje) * 100) }}%
+                                    {% else %}
+                                        0%
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    Nenhum dado disponível
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Gráfico de Portos
+const ctxPortos = document.getElementById('grafico-portos').getContext('2d');
+new Chart(ctxPortos, {
+    type: 'bar',
+    data: {
+        labels: [{% for porto in vendas_por_porto %}'{{ porto.nome }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Valor Total (R$)',
+            data: [{% for porto in vendas_por_porto %}{{ porto.total }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(13, 110, 253, 0.7)',
+            borderColor: 'rgba(13, 110, 253, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Gráfico de Categorias
+const ctxCategorias = document.getElementById('grafico-categorias').getContext('2d');
+new Chart(ctxCategorias, {
+    type: 'doughnut',
+    data: {
+        labels: [{% for cat in vendas_por_categoria %}'{{ cat.nome }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for cat in vendas_por_categoria %}{{ cat.total }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.7)',
+                'rgba(54, 162, 235, 0.7)',
+                'rgba(255, 206, 86, 0.7)',
+                'rgba(75, 192, 192, 0.7)',
+                'rgba(153, 102, 255, 0.7)',
+                'rgba(255, 159, 64, 0.7)',
+                'rgba(199, 199, 199, 0.7)',
+                'rgba(83, 102, 255, 0.7)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'right'
+            }
+        }
+    }
+});
+
+// Atualização em tempo real (a cada 30 segundos)
+setInterval(function() {
+    fetch('/api/dashboard')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('total-vendas').textContent = 
+                'R$ ' + data.total_vendas.toFixed(2).replace('.', ',');
+        })
+        .catch(error => console.error('Erro ao atualizar dashboard:', error));
+}, 30000);
+</script>
+{% endblock %}

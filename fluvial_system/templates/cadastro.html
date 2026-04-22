@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastro de {{ tipo|capitalize }} - Fluvial System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="fw-bold text-primary">
+            <i class="fas fa-plus-circle"></i> Cadastro de {{ tipo|capitalize }}
+        </h2>
+        <p class="text-muted">Gerenciar {{ tipo }}s do sistema</p>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Formulário -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-edit"></i> Novo {{ tipo|capitalize }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% if tipo == 'categoria' %}
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome *</label>
+                        <input type="text" class="form-control" id="nome" name="nome" required 
+                               placeholder="Ex: Carro de Passeio">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="valor_base" class="form-label">Valor Base (R$) *</label>
+                        <input type="number" step="0.01" class="form-control" id="valor_base" name="valor_base" required 
+                               placeholder="0,00">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label">Descrição</label>
+                        <textarea class="form-control" id="descricao" name="descricao" rows="3" 
+                                  placeholder="Descrição da categoria..."></textarea>
+                    </div>
+                    
+                    {% elif tipo == 'porto' %}
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome do Porto *</label>
+                        <input type="text" class="form-control" id="nome" name="nome" required 
+                               placeholder="Ex: Porto Principal">
+                    </div>
+                    
+                    {% elif tipo == 'empresa' %}
+                    <div class="mb-3">
+                        <label for="razao_social" class="form-label">Razão Social *</label>
+                        <input type="text" class="form-control" id="razao_social" name="razao_social" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="nome_fantasia" class="form-label">Nome Fantasia</label>
+                        <input type="text" class="form-control" id="nome_fantasia" name="nome_fantasia>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="cnpj" class="form-label">CNPJ</label>
+                        <input type="text" class="form-control" id="cnpj" name="cnpj" placeholder="00.000.000/0000-00">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="tipo_faturamento" class="form-label">Tipo de Faturamento *</label>
+                        <select class="form-select" id="tipo_faturamento" name="tipo_faturamento" required>
+                            <option value="mensal">Mensal</option>
+                            <option value="quinzenal">Quinzenal</option>
+                        </select>
+                    </div>
+                    
+                    {% elif tipo == 'usuario' %}
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome Completo *</label>
+                        <input type="text" class="form-control" id="nome" name="nome" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">E-mail *</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="senha" class="form-label">Senha *</label>
+                        <input type="password" class="form-control" id="senha" name="senha" required minlength="6">
+                    </div>
+                    {% endif %}
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Lista -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list"></i> {{ tipo|capitalize }}s Cadastrados</h5>
+                <span class="badge bg-primary">{{ itens|length }}</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                {% if tipo == 'categoria' %}
+                                <th>Nome</th>
+                                <th>Valor Base</th>
+                                <th>Descrição</th>
+                                {% elif tipo == 'porto' %}
+                                <th>Nome</th>
+                                <th>Status</th>
+                                {% elif tipo == 'empresa' %}
+                                <th>Razão Social</th>
+                                <th>Nome Fantasia</th>
+                                <th>CNPJ</th>
+                                <th>Faturamento</th>
+                                {% elif tipo == 'usuario' %}
+                                <th>Nome</th>
+                                <th>E-mail</th>
+                                <th>Status</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in itens %}
+                            <tr>
+                                <td>{{ item.id }}</td>
+                                {% if tipo == 'categoria' %}
+                                <td><strong>{{ item.nome }}</strong></td>
+                                <td class="text-success">R$ {{ "%.2f"|format(item.valor_base) }}</td>
+                                <td>{{ item.descricao or '-' }}</td>
+                                {% elif tipo == 'porto' %}
+                                <td><strong>{{ item.nome }}</strong></td>
+                                <td>
+                                    {% if item.ativo %}
+                                        <span class="badge bg-success">Ativo</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inativo</span>
+                                    {% endif %}
+                                </td>
+                                {% elif tipo == 'empresa' %}
+                                <td>{{ item.razao_social }}</td>
+                                <td>{{ item.nome_fantasia or '-' }}</td>
+                                <td>{{ item.cnpj or '-' }}</td>
+                                <td>
+                                    <span class="badge bg-info">{{ item.tipo_faturamento|capitalize }}</span>
+                                </td>
+                                {% elif tipo == 'usuario' %}
+                                <td>{{ item.nome }}</td>
+                                <td>{{ item.email }}</td>
+                                <td>
+                                    {% if item.ativo %}
+                                        <span class="badge bg-success">Ativo</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inativo</span>
+                                    {% endif %}
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    Nenhum registro encontrado
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Relatórios - Fluvial System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="fw-bold text-primary">
+            <i class="fas fa-file-alt"></i> Relatórios de Vendas
+        </h2>
+        <p class="text-muted">Consulte e analise as vendas por período</p>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0"><i class="fas fa-filter"></i> Filtros de Pesquisa</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('relatorios') }}">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="data_inicio" class="form-label">Data Início</label>
+                    <input type="date" class="form-control" id="data_inicio" name="data_inicio" 
+                           value="{{ filtros.data_inicio if filtros else '' }}">
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="data_fim" class="form-label">Data Fim</label>
+                    <input type="date" class="form-control" id="data_fim" name="data_fim"
+                           value="{{ filtros.data_fim if filtros else '' }}">
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="porto_id" class="form-label">Porto</label>
+                    <select class="form-select" id="porto_id" name="porto_id">
+                        <option value="">Todos</option>
+                        {% for porto in portos %}
+                        <option value="{{ porto.id }}" {{ 'selected' if filtros and filtros.porto_id == porto.id|string else '' }}>
+                            {{ porto.nome }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="usuario_id" class="form-label">Operador</label>
+                    <select class="form-select" id="usuario_id" name="usuario_id">
+                        <option value="">Todos</option>
+                        {% for usuario in usuarios %}
+                        <option value="{{ usuario.id }}" {{ 'selected' if filtros and filtros.usuario_id == usuario.id|string else '' }}>
+                            {{ usuario.nome }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="categoria_id" class="form-label">Categoria</label>
+                    <select class="form-select" id="categoria_id" name="categoria_id">
+                        <option value="">Todas</option>
+                        {% for categoria in categorias %}
+                        <option value="{{ categoria.id }}" {{ 'selected' if filtros and filtros.categoria_id == categoria.id|string else '' }}>
+                            {{ categoria.nome }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if vendas %}
+<!-- Resumo -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card bg-success text-white shadow-sm">
+            <div class="card-body text-center">
+                <h6 class="card-subtitle">Total de Vendas</h6>
+                <h2 class="mb-0">R$ {{ "%.2f"|format(total_vendas) }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card bg-info text-white shadow-sm">
+            <div class="card-body text-center">
+                <h6 class="card-subtitle">Quantidade</h6>
+                <h2 class="mb-0">{{ total_quantidade }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card bg-warning text-dark shadow-sm">
+            <div class="card-body text-center">
+                <h6 class="card-subtitle">Ticket Médio</h6>
+                <h2 class="mb-0">
+                    {% if total_quantidade > 0 %}
+                        R$ {{ "%.2f"|format(total_vendas / total_quantidade) }}
+                    {% else %}
+                        R$ 0,00
+                    {% endif %}
+                </h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance por Operador -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Performance por Operador</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Operador</th>
+                        <th class="text-center">Atendimentos</th>
+                        <th class="text-end">Total Vendido</th>
+                        <th class="text-end">% do Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for operador, dados in por_operador.items() %}
+                    <tr>
+                        <td><strong>{{ operador }}</strong></td>
+                        <td class="text-center">{{ dados.quantidade }}</td>
+                        <td class="text-end text-success">R$ {{ "%.2f"|format(dados.total) }}</td>
+                        <td class="text-end">
+                            {{ "%.1f"|format((dados.total / total_vendas) * 100) }}%
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Detalhe das Vendas -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-list"></i> Detalhamento das Vendas</h5>
+        <span class="badge bg-primary">{{ vendas|length }} registros</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Placa</th>
+                        <th>Categoria</th>
+                        <th>Porto</th>
+                        <th>Operador</th>
+                        <th>Empresa</th>
+                        <th class="text-end">Valor</th>
+                        <th class="text-center">Pago</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for venda in vendas %}
+                    <tr>
+                        <td>{{ venda.data_venda.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>{{ venda.placa or '-' }}</td>
+                        <td>{{ venda.categoria.nome }}</td>
+                        <td>{{ venda.porto.nome }}</td>
+                        <td>{{ venda.operador.nome }}</td>
+                        <td>{{ venda.empresa.nome_fantasia if venda.empresa else '-' }}</td>
+                        <td class="text-end text-success">
+                            <strong>R$ {{ "%.2f"|format(venda.valor_final) }}</strong>
+                        </td>
+                        <td class="text-center">
+                            {% if venda.pago %}
+                                <span class="badge bg-success">Sim</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Faturado</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Botão Exportar -->
+<div class="mt-3 text-end">
+    <button class="btn btn-outline-success" onclick="window.print()">
+        <i class="fas fa-print"></i> Imprimir Relatório
+    </button>
+</div>
+
+{% elif filtros %}
+<!-- Sem resultados -->
+<div class="alert alert-warning text-center">
+    <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+    <h4>Nenhuma venda encontrada</h4>
+    <p>Não há registros para os filtros selecionados.</p>
+</div>
+
+{% else %}
+<!-- Mensagem inicial -->
+<div class="alert alert-info text-center">
+    <i class="fas fa-info-circle fa-3x mb-3"></i>
+    <h4>Selecione os filtros</h4>
+    <p>Utilize os filtros acima para consultar as vendas do sistema.</p>
+</div>
+{% endif %}
+{% endblock %}
