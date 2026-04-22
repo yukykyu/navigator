@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+
+{% block title %}Atendimento - Fluvial System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="fw-bold text-primary">
+            <i class="fas fa-car"></i> Atendimento
+        </h2>
+        <p class="text-muted">Registrar nova travessia</p>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Formulário de Atendimento -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-plus-circle text-success"></i> Nova Venda</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('atendimento') }}" id="form-atendimento">
+                    <div class="row g-3">
+                        <!-- Leitura de Placa -->
+                        <div class="col-md-6">
+                            <label for="placa" class="form-label">Placa do Veículo</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control text-uppercase" id="placa" name="placa" 
+                                       placeholder="ABC1D23" maxlength="8" style="text-transform: uppercase;">
+                                <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#modalCamera">
+                                    <i class="fas fa-camera"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#modalUpload">
+                                    <i class="fas fa-upload"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Opcional - Digite ou use a câmera para leitura automática</small>
+                        </div>
+                        
+                        <!-- Categoria -->
+                        <div class="col-md-6">
+                            <label for="categoria_id" class="form-label">Categoria *</label>
+                            <select class="form-select" id="categoria_id" name="categoria_id" required>
+                                <option value="">Selecione...</option>
+                                {% for categoria in categorias %}
+                                <option value="{{ categoria.id }}" data-valor="{{ categoria.valor_base }}">
+                                    {{ categoria.nome }} - R$ {{ "%.2f"|format(categoria.valor_base) }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Porto -->
+                        <div class="col-md-6">
+                            <label for="porto_id" class="form-label">Porto *</label>
+                            <select class="form-select" id="porto_id" name="porto_id" required>
+                                <option value="">Selecione...</option>
+                                {% for porto in portos %}
+                                <option value="{{ porto.id }}">{{ porto.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Empresa (Opcional) -->
+                        <div class="col-md-6">
+                            <label for="empresa_id" class="form-label">Empresa (Faturamento)</label>
+                            <select class="form-select" id="empresa_id" name="empresa_id">
+                                <option value="">Nenhuma (Pagamento à vista)</option>
+                                {% for empresa in empresas %}
+                                <option value="{{ empresa.id }}">
+                                    {{ empresa.nome_fantasia or empresa.razao_social }} ({{ empresa.tipo_faturamento }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Deixe em branco para pagamento imediato</small>
+                        </div>
+                        
+                        <!-- Pago -->
+                        <div class="col-md-6">
+                            <label for="pago" class="form-label">Status do Pagamento</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="pago" name="pago" checked>
+                                <label class="form-check-label" for="pago">Pago</label>
+                            </div>
+                            <small class="text-muted">Desmarque para faturamento</small>
+                        </div>
+                        
+                        <!-- Valor Previsto -->
+                        <div class="col-md-6">
+                            <label class="form-label">Valor Previsto</label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="text" class="form-control fw-bold" id="valor_previsto" readonly value="0,00">
+                            </div>
+                            <small class="text-muted" id="info_acrescimo"></small>
+                        </div>
+                        
+                        <!-- Observações -->
+                        <div class="col-12">
+                            <label for="observacoes" class="form-label">Observações</label>
+                            <textarea class="form-control" id="observacoes" name="observacoes" rows="2" 
+                                      placeholder="Informações adicionais..."></textarea>
+                        </div>
+                        
+                        <!-- Botão Enviar -->
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-success btn-lg w-100">
+                                <i class="fas fa-check-circle"></i> Registrar Venda
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Resumo do Dia -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-user"></i> Meu Atendimentos Hoje</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <h2 class="display-4 fw-bold text-primary" id="meus-atendimentos">0</h2>
+                    <p class="text-muted">Atendimentos realizados</p>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <span>Total:</span>
+                    <strong class="text-success" id="meu-total">R$ 0,00</strong>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-clock"></i> Horário Atual</h5>
+            </div>
+            <div class="card-body text-center">
+                <h2 class="display-6" id="relogio">--:--:--</h2>
+                <p class="text-muted" id="data-atual">--/--/----</p>
+                <div class="alert alert-warning mt-2" id="aviso-noturno" style="display: none;">
+                    <i class="fas fa-moon"></i> Taxa noturna aplicada (+30%)
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Camera -->
+<div class="modal fade" id="modalCamera" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-camera"></i> Capturar Placa via Câmera</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <video id="video-camera" autoplay playsinline style="width: 100%; max-width: 500px; border-radius: 8px;"></video>
+                <canvas id="canvas-capture" style="display: none;"></canvas>
+                <div class="mt-3">
+                    <button class="btn btn-primary" id="btn-capturar">
+                        <i class="fas fa-camera"></i> Capturar Imagem
+                    </button>
+                </div>
+                <p class="text-muted mt-2 small">Posicione a placa dentro do quadro para melhor leitura</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Upload -->
+<div class="modal fade" id="modalUpload" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-upload"></i> Upload de Imagem</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-upload-placa" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="imagem-placa" class="form-label">Selecionar Imagem</label>
+                        <input type="file" class="form-control" id="imagem-placa" name="imagem" accept="image/*" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Processar Imagem
+                    </button>
+                </form>
+                <div id="resultado-upload" class="mt-3" style="display: none;">
+                    <div class="alert alert-success">
+                        <strong>Placa detectada:</strong> <span id="placa-detectada"></span>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" id="btn-usar-placa">
+                        <i class="fas fa-check"></i> Usar esta placa
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Atualizar valor previsto quando mudar categoria
+document.getElementById('categoria_id').addEventListener('change', function() {
+    const option = this.options[this.selectedIndex];
+    const valorBase = parseFloat(option.dataset.valor) || 0;
+    const horaAtual = new Date().getHours();
+    
+    // Verificar se é horário noturno (22:00 - 05:00)
+    let acrescimo = 0;
+    if (horaAtual >= 22 || horaAtual < 5) {
+        acrescimo = 0.30;
+    }
+    
+    const valorFinal = valorBase * (1 + acrescimo);
+    document.getElementById('valor_previsto').value = valorFinal.toFixed(2).replace('.', ',');
+    
+    const infoAcrecimo = document.getElementById('info_acrescimo');
+    if (acrescimo > 0) {
+        infoAcrecimo.textContent = `Acréscimo noturno de 30% aplicado`;
+        infoAcrecimo.className = 'text-warning fw-bold';
+        document.getElementById('aviso-noturno').style.display = 'block';
+    } else {
+        infoAcrecimo.textContent = '';
+        document.getElementById('aviso-noturno').style.display = 'none';
+    }
+});
+
+// Relógio em tempo real
+function atualizarRelogio() {
+    const agora = new Date();
+    document.getElementById('relogio').textContent = agora.toLocaleTimeString('pt-BR');
+    document.getElementById('data-atual').textContent = agora.toLocaleDateString('pt-BR');
+    
+    // Verificar horário noturno
+    const hora = agora.getHours();
+    if (hora >= 22 || hora < 5) {
+        document.getElementById('aviso-noturno').style.display = 'block';
+    } else {
+        document.getElementById('aviso-noturno').style.display = 'none';
+    }
+}
+atualizarRelogio();
+setInterval(atualizarRelogio, 1000);
+
+// Upload de imagem para OCR
+document.getElementById('form-upload-placa').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const btnProcessar = this.querySelector('button[type="submit"]');
+    
+    btnProcessar.disabled = true;
+    btnProcessar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+    
+    fetch('/upload_placa', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            document.getElementById('placa-detectada').textContent = data.placa;
+            document.getElementById('resultado-upload').style.display = 'block';
+        } else {
+            alert('Erro: ' + data.erro);
+        }
+    })
+    .catch(error => {
+        alert('Erro ao processar imagem: ' + error);
+    })
+    .finally(() => {
+        btnProcessar.disabled = false;
+        btnProcessar.innerHTML = '<i class="fas fa-search"></i> Processar Imagem';
+    });
+});
+
+// Usar placa detectada
+document.getElementById('btn-usar-placa').addEventListener('click', function() {
+    const placa = document.getElementById('placa-detectada').textContent;
+    document.getElementById('placa').value = placa;
+    
+    // Fechar modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalUpload'));
+    modal.hide();
+    
+    // Resetar
+    document.getElementById('resultado-upload').style.display = 'none';
+    document.getElementById('form-upload-placa').reset();
+});
+
+// Câmera (funcionalidade básica)
+let streamCamera = null;
+
+document.getElementById('modalCamera').addEventListener('shown.bs.modal', async function() {
+    try {
+        streamCamera = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'environment' } 
+        });
+        document.getElementById('video-camera').srcObject = streamCamera;
+    } catch (error) {
+        alert('Não foi possível acessar a câmera: ' + error.message);
+    }
+});
+
+document.getElementById('modalCamera').addEventListener('hidden.bs.modal', function() {
+    if (streamCamera) {
+        streamCamera.getTracks().forEach(track => track.stop());
+        streamCamera = null;
+    }
+});
+
+document.getElementById('btn-capturar').addEventListener('click', function() {
+    const video = document.getElementById('video-camera');
+    const canvas = document.getElementById('canvas-capture');
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    
+    // Converter para blob e fazer upload
+    canvas.toBlob(function(blob) {
+        const formData = new FormData();
+        formData.append('imagem', blob, 'captura.jpg');
+        
+        fetch('/upload_placa', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso) {
+                document.getElementById('placa').value = data.placa;
+                
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalCamera'));
+                modal.hide();
+            } else {
+                alert('Erro ao ler placa: ' + data.erro);
+            }
+        })
+        .catch(error => {
+            alert('Erro: ' + error);
+        });
+    }, 'image/jpeg');
+});
+
+// Formatar placa automaticamente
+document.getElementById('placa').addEventListener('input', function() {
+    this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+});
+</script>
+{% endblock %}
