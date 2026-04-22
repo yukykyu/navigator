@@ -38,17 +38,38 @@
                             <small class="text-muted">Opcional - Digite ou use a câmera para leitura automática</small>
                         </div>
                         
-                        <!-- Categoria -->
+                        <!-- Cor do Veículo -->
+                        <div class="col-md-6">
+                            <label for="cor_veiculo" class="form-label">Cor do Veículo</label>
+                            <select class="form-select" id="cor_veiculo" name="cor_veiculo">
+                                <option value="">Selecione...</option>
+                                {% for cor in cores %}
+                                <option value="{{ cor.codigo }}">{{ cor.nome }} ({{ cor.codigo }})</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Informe a cor usando o código ou nome</small>
+                        </div>
+                        
+                        <!-- Categoria com busca rápida -->
                         <div class="col-md-6">
                             <label for="categoria_id" class="form-label">Categoria *</label>
-                            <select class="form-select" id="categoria_id" name="categoria_id" required>
-                                <option value="">Selecione...</option>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="busca_categoria" 
+                                       placeholder="Cód. ou Nome (ex: 10, CARRO)" 
+                                       autocomplete="off">
+                                <button class="btn btn-outline-primary" type="button" id="btn-buscar-categoria">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <select class="form-select mt-2" id="categoria_id" name="categoria_id" required>
+                                <option value="">Selecione ou digite o código...</option>
                                 {% for categoria in categorias %}
-                                <option value="{{ categoria.id }}" data-valor="{{ categoria.valor_base }}">
-                                    {{ categoria.nome }} - R$ {{ "%.2f"|format(categoria.valor_base) }}
+                                <option value="{{ categoria.id }}" data-codigo="{{ categoria.codigo }}" data-valor="{{ categoria.valor_base }}">
+                                    [{{ categoria.codigo }}] {{ categoria.nome }} - R$ {{ "%.2f"|format(categoria.valor_base) }}
                                 </option>
                                 {% endfor %}
                             </select>
+                            <small class="text-muted">Digite o código (ex: 10) ou parte do nome e clique em buscar</small>
                         </div>
                         
                         <!-- Porto -->
@@ -205,6 +226,40 @@
 
 {% block extra_js %}
 <script>
+// Busca rápida de categoria por código ou nome
+document.getElementById('btn-buscar-categoria').addEventListener('click', function() {
+    const termo = document.getElementById('busca_categoria').value.trim();
+    if (!termo) return;
+    
+    fetch(`/api/buscar_categoria?termo=${encodeURIComponent(termo)}`)
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('categoria_id');
+            if (data.length > 0) {
+                // Selecionar primeiro resultado
+                select.value = data[0].id;
+                // Disparar evento change para atualizar valor
+                select.dispatchEvent(new Event('change'));
+                // Limpar campo de busca
+                document.getElementById('busca_categoria').value = `[${data[0].codigo}] ${data[0].nome}`;
+            } else {
+                alert('Nenhuma categoria encontrada para: ' + termo);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao buscar categoria');
+        });
+});
+
+// Permitir busca pressionando Enter
+document.getElementById('busca_categoria').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('btn-buscar-categoria').click();
+    }
+});
+
 // Atualizar valor previsto quando mudar categoria
 document.getElementById('categoria_id').addEventListener('change', function() {
     const option = this.options[this.selectedIndex];
