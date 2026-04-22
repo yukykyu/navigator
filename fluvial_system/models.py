@@ -41,6 +41,7 @@ class CategoriaVeiculo(db.Model):
     __tablename__ = 'categorias_veiculos'
     
     id = db.Column(db.Integer, primary_key=True)
+    codigo = db.Column(db.String(10), unique=True, nullable=False)  # Código numérico rápido (ex: 10, 01, 09)
     nome = db.Column(db.String(100), nullable=False)
     valor_base = db.Column(db.Float, nullable=False)
     descricao = db.Column(db.Text)
@@ -87,6 +88,7 @@ class Venda(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     placa = db.Column(db.String(20))
+    cor_veiculo = db.Column(db.String(50))  # Cor do veículo
     categoria_id = db.Column(db.Integer, db.ForeignKey('categorias_veiculos.id'), nullable=False)
     porto_id = db.Column(db.Integer, db.ForeignKey('portos.id'), nullable=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)

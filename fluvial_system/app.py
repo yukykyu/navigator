@@ -214,6 +214,7 @@ def index():
 def atendimento():
     if request.method == 'POST':
         placa = request.form.get('placa', '').upper().strip()
+        cor_veiculo = request.form.get('cor_veiculo', '').strip()
         categoria_id = request.form.get('categoria_id', type=int)
         porto_id = request.form.get('porto_id', type=int)
         empresa_id = request.form.get('empresa_id', type=int)
@@ -232,6 +233,7 @@ def atendimento():
         
         venda = Venda(
             placa=placa if placa else None,
+            cor_veiculo=cor_veiculo if cor_veiculo else None,
             categoria_id=categoria_id,
             porto_id=porto_id,
             usuario_id=current_user.id,
@@ -249,11 +251,12 @@ def atendimento():
         flash(f'Vendida registrada com sucesso! Valor: R$ {valor_final:.2f}', 'success')
         return redirect(url_for('atendimento'))
     
-    categorias = CategoriaVeiculo.query.filter_by(ativo=True).order_by(CategoriaVeiculo.nome).all()
+    categorias = CategoriaVeiculo.query.filter_by(ativo=True).order_by(CategoriaVeiculo.codigo).all()
     portos = Porto.query.filter_by(ativo=True).order_by(Porto.nome).all()
     empresas = Empresa.query.filter_by(ativo=True).order_by(Empresa.nome_fantasia).all()
+    cores = Config.CORES_VEICULOS
     
-    return render_template('atendimento.html', categorias=categorias, portos=portos, empresas=empresas)
+    return render_template('atendimento.html', categorias=categorias, portos=portos, empresas=empresas, cores=cores)
 
 # Upload e leitura de placa
 @app.route('/upload_placa', methods=['POST'])
@@ -449,6 +452,52 @@ def api_dashboard():
         'timestamp': datetime.now().isoformat()
     })
 
+# API para buscar categoria por código ou nome
+@app.route('/api/buscar_categoria')
+@login_required
+def api_buscar_categoria():
+    termo = request.args.get('termo', '').strip().upper()
+    
+    if not termo:
+        return jsonify([])
+    
+    # Buscar por código exato primeiro
+    categoria = CategoriaVeiculo.query.filter_by(codigo=termo, ativo=True).first()
+    if categoria:
+        return jsonify([{
+            'id': categoria.id,
+            'codigo': categoria.codigo,
+            'nome': categoria.nome,
+            'valor_base': categoria.valor_base
+        }])
+    
+    # Buscar por nome parcial
+    categorias = CategoriaVeiculo.query.filter(
+        CategoriaVeiculo.nome.ilike(f'%{termo}%'),
+        CategoriaVeiculo.ativo == True
+    ).limit(10).all()
+    
+    resultado = [{
+        'id': cat.id,
+        'codigo': cat.codigo,
+        'nome': cat.nome,
+        'valor_base': cat.valor_base
+    } for cat in categorias]
+    
+    return jsonify(resultado)
+
+# API para listar todas as categorias
+@app.route('/api/listar_categorias')
+@login_required
+def api_listar_categorias():
+    categorias = CategoriaVeiculo.query.filter_by(ativo=True).order_by(CategoriaVeiculo.codigo).all()
+    return jsonify([{
+        'id': cat.id,
+        'codigo': cat.codigo,
+        'nome': cat.nome,
+        'valor_base': cat.valor_base
+    } for cat in categorias])
+
 # Inicialização do banco
 def criar_banco():
     with app.app_context():
@@ -468,23 +517,13 @@ def criar_banco():
                 porto = Porto(nome=nome_porto)
                 db.session.add(porto)
             
-            # Criar categorias padrão
-            categorias_padrao = [
-                ('Moto', 8.00, 'Motocicleta'),
-                ('Carro de Passeio', 22.00, 'Automóvel de passageiros'),
-                ('Caminhonete', 28.00, 'Veículo utilitário'),
-                ('Caminhão Leve', 45.00, 'Caminhão até 2 eixos'),
-                ('Caminhão Pesado', 65.00, 'Caminhão com mais de 2 eixos'),
-                ('Ônibus', 55.00, 'Transporte coletivo'),
-                ('Pedestre', 3.50, 'Passageiro a pé'),
-                ('Ciclista', 2.00, 'Bicicleta')
-            ]
-            
-            for nome, valor, descricao in categorias_padrao:
+            # Criar categorias padrão com códigos
+            for cat_data in Config.CATEGORIAS_PADRAO:
                 categoria = CategoriaVeiculo(
-                    nome=nome,
-                    valor_base=valor,
-                    descricao=descricao
+                    codigo=cat_data['codigo'],
+                    nome=cat_data['nome'],
+                    valor_base=cat_data['valor_base'],
+                    descricao=cat_data['descricao']
                 )
                 db.session.add(categoria)
             
